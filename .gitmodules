@@ -1,3 +1,6 @@
 [submodule "d-star-lite"]
 	path = d-star-lite
 	url = https://github.com/mdeyo/d-star-lite.git
+[submodule "Dstar-lite-pathplanner"]
+	path = Dstar-lite-pathplanner
+	url = https://github.com/Sollimann/Dstar-lite-pathplanner.git
