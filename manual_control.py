@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.8
 
 # Copyright (c) 2019 Computer Vision Center (CVC) at the Universitat Autonoma de
 # Barcelona (UAB).
@@ -140,12 +140,14 @@ try:
     from pygame.locals import K_MINUS
     from pygame.locals import K_EQUALS
 except ImportError:
-    raise RuntimeError('cannot import pygame, make sure pygame package is installed')
+    raise RuntimeError(
+        'cannot import pygame, make sure pygame package is installed')
 
 try:
     import numpy as np
 except ImportError:
-    raise RuntimeError('cannot import numpy, make sure numpy package is installed')
+    raise RuntimeError(
+        'cannot import numpy, make sure numpy package is installed')
 
 
 # ==============================================================================
@@ -155,14 +157,16 @@ except ImportError:
 
 def find_weather_presets():
     rgx = re.compile('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)')
-    name = lambda x: ' '.join(m.group(0) for m in rgx.finditer(x))
-    presets = [x for x in dir(carla.WeatherParameters) if re.match('[A-Z].+', x)]
+    def name(x): return ' '.join(m.group(0) for m in rgx.finditer(x))
+    presets = [x for x in dir(carla.WeatherParameters)
+               if re.match('[A-Z].+', x)]
     return [(getattr(carla.WeatherParameters, x), name(x)) for x in presets]
 
 
 def get_actor_display_name(actor, truncate=250):
     name = ' '.join(actor.type_id.replace('_', '.').title().split('.')[1:])
     return (name[:truncate - 1] + u'\u2026') if len(name) > truncate else name
+
 
 def get_actor_blueprints(world, filter, generation):
     bps = world.get_blueprint_library().filter(filter)
@@ -179,7 +183,8 @@ def get_actor_blueprints(world, filter, generation):
         int_generation = int(generation)
         # Check if generation is in available generations
         if int_generation in [1, 2]:
-            bps = [x for x in bps if int(x.get_attribute('generation')) == int_generation]
+            bps = [x for x in bps if int(
+                x.get_attribute('generation')) == int_generation]
             return bps
         else:
             print("   Warning! Actor Generation is not valid. No actor will be spawned.")
@@ -204,7 +209,8 @@ class World(object):
         except RuntimeError as error:
             print('RuntimeError: {}'.format(error))
             print('  The server could not send the OpenDRIVE (.xodr) file:')
-            print('  Make sure it exists, has the same name of your town, and is correct.')
+            print(
+                '  Make sure it exists, has the same name of your town, and is correct.')
             sys.exit(1)
         self.hud = hud
         self.player = None
@@ -247,20 +253,25 @@ class World(object):
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
         cam_pos_index = self.camera_manager.transform_index if self.camera_manager is not None else 0
         # Get a random blueprint.
-        blueprint = random.choice(get_actor_blueprints(self.world, self._actor_filter, self._actor_generation))
+        blueprint = random.choice(get_actor_blueprints(
+            self.world, self._actor_filter, self._actor_generation))
         blueprint.set_attribute('role_name', self.actor_role_name)
         if blueprint.has_attribute('color'):
-            color = random.choice(blueprint.get_attribute('color').recommended_values)
+            color = random.choice(
+                blueprint.get_attribute('color').recommended_values)
             blueprint.set_attribute('color', color)
         if blueprint.has_attribute('driver_id'):
-            driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
+            driver_id = random.choice(
+                blueprint.get_attribute('driver_id').recommended_values)
             blueprint.set_attribute('driver_id', driver_id)
         if blueprint.has_attribute('is_invincible'):
             blueprint.set_attribute('is_invincible', 'true')
         # set the max speed
         if blueprint.has_attribute('speed'):
-            self.player_max_speed = float(blueprint.get_attribute('speed').recommended_values[1])
-            self.player_max_speed_fast = float(blueprint.get_attribute('speed').recommended_values[2])
+            self.player_max_speed = float(
+                blueprint.get_attribute('speed').recommended_values[1])
+            self.player_max_speed_fast = float(
+                blueprint.get_attribute('speed').recommended_values[2])
 
         # Spawn the player.
         if self.player is not None:
@@ -277,7 +288,8 @@ class World(object):
                 print('Please add some Vehicle Spawn Point to your UE4 scene.')
                 sys.exit(1)
             spawn_points = self.map.get_spawn_points()
-            spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
+            spawn_point = random.choice(
+                spawn_points) if spawn_points else carla.Transform()
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
             self.modify_vehicle_physics(self.player)
         # Set up the sensors.
@@ -326,7 +338,7 @@ class World(object):
             self.radar_sensor = None
 
     def modify_vehicle_physics(self, actor):
-        #If actor is not a vehicle, we cannot use the physics control
+        # If actor is not a vehicle, we cannot use the physics control
         try:
             physics_control = actor.get_physics_control()
             physics_control.use_sweep_wheel_collision = True
@@ -370,6 +382,7 @@ class World(object):
 
 class KeyboardControl(object):
     """Class that handles keyboard input."""
+
     def __init__(self, world, start_in_autopilot):
         self._autopilot_enabled = start_in_autopilot
         if isinstance(world.player, carla.Vehicle):
@@ -430,11 +443,14 @@ class KeyboardControl(object):
                     if world.constant_velocity_enabled:
                         world.player.disable_constant_velocity()
                         world.constant_velocity_enabled = False
-                        world.hud.notification("Disabled Constant Velocity Mode")
+                        world.hud.notification(
+                            "Disabled Constant Velocity Mode")
                     else:
-                        world.player.enable_constant_velocity(carla.Vector3D(17, 0, 0))
+                        world.player.enable_constant_velocity(
+                            carla.Vector3D(17, 0, 0))
                         world.constant_velocity_enabled = True
-                        world.hud.notification("Enabled Constant Velocity Mode at 60 km/h")
+                        world.hud.notification(
+                            "Enabled Constant Velocity Mode at 60 km/h")
                 elif event.key == K_t:
                     if world.show_vehicle_telemetry:
                         world.player.show_debug_telemetry(False)
@@ -451,7 +467,8 @@ class KeyboardControl(object):
                     index_ctrl = 0
                     if pygame.key.get_mods() & KMOD_CTRL:
                         index_ctrl = 9
-                    world.camera_manager.set_sensor(event.key - 1 - K_0 + index_ctrl)
+                    world.camera_manager.set_sensor(
+                        event.key - 1 - K_0 + index_ctrl)
                 elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
                     world.camera_manager.toggle_recording()
                 elif event.key == K_r and (pygame.key.get_mods() & KMOD_CTRL):
@@ -473,22 +490,26 @@ class KeyboardControl(object):
                     # disable autopilot
                     self._autopilot_enabled = False
                     world.player.set_autopilot(self._autopilot_enabled)
-                    world.hud.notification("Replaying file 'manual_recording.rec'")
+                    world.hud.notification(
+                        "Replaying file 'manual_recording.rec'")
                     # replayer
-                    client.replay_file("manual_recording.rec", world.recording_start, 0, 0)
+                    client.replay_file("manual_recording.rec",
+                                       world.recording_start, 0, 0)
                     world.camera_manager.set_sensor(current_index)
                 elif event.key == K_MINUS and (pygame.key.get_mods() & KMOD_CTRL):
                     if pygame.key.get_mods() & KMOD_SHIFT:
                         world.recording_start -= 10
                     else:
                         world.recording_start -= 1
-                    world.hud.notification("Recording start time is %d" % (world.recording_start))
+                    world.hud.notification(
+                        "Recording start time is %d" % (world.recording_start))
                 elif event.key == K_EQUALS and (pygame.key.get_mods() & KMOD_CTRL):
                     if pygame.key.get_mods() & KMOD_SHIFT:
                         world.recording_start += 10
                     else:
                         world.recording_start += 1
-                    world.hud.notification("Recording start time is %d" % (world.recording_start))
+                    world.hud.notification(
+                        "Recording start time is %d" % (world.recording_start))
                 if isinstance(self._control, carla.VehicleControl):
                     if event.key == K_q:
                         self._control.gear = 1 if self._control.reverse else -1
@@ -539,22 +560,25 @@ class KeyboardControl(object):
 
         if not self._autopilot_enabled:
             if isinstance(self._control, carla.VehicleControl):
-                self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())
+                self._parse_vehicle_keys(
+                    pygame.key.get_pressed(), clock.get_time())
                 self._control.reverse = self._control.gear < 0
                 # Set automatic control-related vehicle lights
                 if self._control.brake:
                     current_lights |= carla.VehicleLightState.Brake
-                else: # Remove the Brake flag
+                else:  # Remove the Brake flag
                     current_lights &= ~carla.VehicleLightState.Brake
                 if self._control.reverse:
                     current_lights |= carla.VehicleLightState.Reverse
-                else: # Remove the Reverse flag
+                else:  # Remove the Reverse flag
                     current_lights &= ~carla.VehicleLightState.Reverse
-                if current_lights != self._lights: # Change the light state only if necessary
+                if current_lights != self._lights:  # Change the light state only if necessary
                     self._lights = current_lights
-                    world.player.set_light_state(carla.VehicleLightState(self._lights))
+                    world.player.set_light_state(
+                        carla.VehicleLightState(self._lights))
             elif isinstance(self._control, carla.WalkerControl):
-                self._parse_walker_keys(pygame.key.get_pressed(), clock.get_time(), world)
+                self._parse_walker_keys(
+                    pygame.key.get_pressed(), clock.get_time(), world)
             world.player.apply_control(self._control)
 
     def _parse_vehicle_keys(self, keys, milliseconds):
@@ -596,7 +620,8 @@ class KeyboardControl(object):
             self._control.speed = .01
             self._rotation.yaw += 0.08 * milliseconds
         if keys[K_UP] or keys[K_w]:
-            self._control.speed = world.player_max_speed_fast if pygame.key.get_mods() & KMOD_SHIFT else world.player_max_speed
+            self._control.speed = world.player_max_speed_fast if pygame.key.get_mods(
+            ) & KMOD_SHIFT else world.player_max_speed
         self._control.jump = keys[K_SPACE]
         self._rotation.yaw = round(self._rotation.yaw, 1)
         self._control.direction = self._rotation.get_forward_vector()
@@ -657,16 +682,21 @@ class HUD(object):
             'Server:  % 16.0f FPS' % self.server_fps,
             'Client:  % 16.0f FPS' % clock.get_fps(),
             '',
-            'Vehicle: % 20s' % get_actor_display_name(world.player, truncate=20),
+            'Vehicle: % 20s' % get_actor_display_name(
+                world.player, truncate=20),
             'Map:     % 20s' % world.map.name.split('/')[-1],
-            'Simulation time: % 12s' % datetime.timedelta(seconds=int(self.simulation_time)),
+            'Simulation time: % 12s' % datetime.timedelta(
+                seconds=int(self.simulation_time)),
             '',
-            'Speed:   % 15.0f km/h' % (3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2)),
+            'Speed:   % 15.0f km/h' % (3.6 *
+                                       math.sqrt(v.x**2 + v.y**2 + v.z**2)),
             u'Compass:% 17.0f\N{DEGREE SIGN} % 2s' % (compass, heading),
             'Accelero: (%5.1f,%5.1f,%5.1f)' % (world.imu_sensor.accelerometer),
             'Gyroscop: (%5.1f,%5.1f,%5.1f)' % (world.imu_sensor.gyroscope),
-            'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
-            'GNSS:% 24s' % ('(% 2.6f, % 3.6f)' % (world.gnss_sensor.lat, world.gnss_sensor.lon)),
+            'Location:% 20s' % ('(% 5.1f, % 5.1f)' %
+                                (t.location.x, t.location.y)),
+            'GNSS:% 24s' % ('(% 2.6f, % 3.6f)' %
+                            (world.gnss_sensor.lat, world.gnss_sensor.lon)),
             'Height:  % 18.0f m' % t.location.z,
             '']
         if isinstance(c, carla.VehicleControl):
@@ -690,8 +720,10 @@ class HUD(object):
             'Number of vehicles: % 8d' % len(vehicles)]
         if len(vehicles) > 1:
             self._info_text += ['Nearby vehicles:']
-            distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
-            vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != world.player.id]
+            def distance(l): return math.sqrt((l.x - t.location.x) **
+                                              2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
+            vehicles = [(distance(x.get_location()), x)
+                        for x in vehicles if x.id != world.player.id]
             for d, vehicle in sorted(vehicles, key=lambda vehicles: vehicles[0]):
                 if d > 200.0:
                     break
@@ -720,26 +752,35 @@ class HUD(object):
                     break
                 if isinstance(item, list):
                     if len(item) > 1:
-                        points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
-                        pygame.draw.lines(display, (255, 136, 0), False, points, 2)
+                        points = [(x + 8, v_offset + 8 + (1.0 - y) * 30)
+                                  for x, y in enumerate(item)]
+                        pygame.draw.lines(
+                            display, (255, 136, 0), False, points, 2)
                     item = None
                     v_offset += 18
                 elif isinstance(item, tuple):
                     if isinstance(item[1], bool):
-                        rect = pygame.Rect((bar_h_offset, v_offset + 8), (6, 6))
-                        pygame.draw.rect(display, (255, 255, 255), rect, 0 if item[1] else 1)
+                        rect = pygame.Rect(
+                            (bar_h_offset, v_offset + 8), (6, 6))
+                        pygame.draw.rect(display, (255, 255, 255),
+                                         rect, 0 if item[1] else 1)
                     else:
-                        rect_border = pygame.Rect((bar_h_offset, v_offset + 8), (bar_width, 6))
-                        pygame.draw.rect(display, (255, 255, 255), rect_border, 1)
+                        rect_border = pygame.Rect(
+                            (bar_h_offset, v_offset + 8), (bar_width, 6))
+                        pygame.draw.rect(
+                            display, (255, 255, 255), rect_border, 1)
                         f = (item[1] - item[2]) / (item[3] - item[2])
                         if item[2] < 0.0:
-                            rect = pygame.Rect((bar_h_offset + f * (bar_width - 6), v_offset + 8), (6, 6))
+                            rect = pygame.Rect(
+                                (bar_h_offset + f * (bar_width - 6), v_offset + 8), (6, 6))
                         else:
-                            rect = pygame.Rect((bar_h_offset, v_offset + 8), (f * bar_width, 6))
+                            rect = pygame.Rect(
+                                (bar_h_offset, v_offset + 8), (f * bar_width, 6))
                         pygame.draw.rect(display, (255, 255, 255), rect)
                     item = item[0]
                 if item:  # At this point has to be a str.
-                    surface = self._font_mono.render(item, True, (255, 255, 255))
+                    surface = self._font_mono.render(
+                        item, True, (255, 255, 255))
                     display.blit(surface, (8, v_offset))
                 v_offset += 18
         self._notifications.render(display)
@@ -782,12 +823,14 @@ class FadingText(object):
 
 class HelpText(object):
     """Helper class to handle text output using pygame"""
+
     def __init__(self, font, width, height):
         lines = __doc__.split('\n')
         self.font = font
         self.line_space = 18
         self.dim = (780, len(lines) * self.line_space + 12)
-        self.pos = (0.5 * width - 0.5 * self.dim[0], 0.5 * height - 0.5 * self.dim[1])
+        self.pos = (0.5 * width - 0.5 *
+                    self.dim[0], 0.5 * height - 0.5 * self.dim[1])
         self.seconds_left = 0
         self.surface = pygame.Surface(self.dim)
         self.surface.fill((0, 0, 0, 0))
@@ -818,11 +861,13 @@ class CollisionSensor(object):
         self.hud = hud
         world = self._parent.get_world()
         bp = world.get_blueprint_library().find('sensor.other.collision')
-        self.sensor = world.spawn_actor(bp, carla.Transform(), attach_to=self._parent)
+        self.sensor = world.spawn_actor(
+            bp, carla.Transform(), attach_to=self._parent)
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda event: CollisionSensor._on_collision(weak_self, event))
+        self.sensor.listen(
+            lambda event: CollisionSensor._on_collision(weak_self, event))
 
     def get_collision_history(self):
         history = collections.defaultdict(int)
@@ -859,11 +904,13 @@ class LaneInvasionSensor(object):
             self.hud = hud
             world = self._parent.get_world()
             bp = world.get_blueprint_library().find('sensor.other.lane_invasion')
-            self.sensor = world.spawn_actor(bp, carla.Transform(), attach_to=self._parent)
+            self.sensor = world.spawn_actor(
+                bp, carla.Transform(), attach_to=self._parent)
             # We need to pass the lambda a weak reference to self to avoid circular
             # reference.
             weak_self = weakref.ref(self)
-            self.sensor.listen(lambda event: LaneInvasionSensor._on_invasion(weak_self, event))
+            self.sensor.listen(
+                lambda event: LaneInvasionSensor._on_invasion(weak_self, event))
 
     @staticmethod
     def _on_invasion(weak_self, event):
@@ -888,11 +935,13 @@ class GnssSensor(object):
         self.lon = 0.0
         world = self._parent.get_world()
         bp = world.get_blueprint_library().find('sensor.other.gnss')
-        self.sensor = world.spawn_actor(bp, carla.Transform(carla.Location(x=1.0, z=2.8)), attach_to=self._parent)
+        self.sensor = world.spawn_actor(bp, carla.Transform(
+            carla.Location(x=1.0, z=2.8)), attach_to=self._parent)
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda event: GnssSensor._on_gnss_event(weak_self, event))
+        self.sensor.listen(
+            lambda event: GnssSensor._on_gnss_event(weak_self, event))
 
     @staticmethod
     def _on_gnss_event(weak_self, event):
@@ -936,8 +985,10 @@ class IMUSensor(object):
             max(limits[0], min(limits[1], sensor_data.accelerometer.y)),
             max(limits[0], min(limits[1], sensor_data.accelerometer.z)))
         self.gyroscope = (
-            max(limits[0], min(limits[1], math.degrees(sensor_data.gyroscope.x))),
-            max(limits[0], min(limits[1], math.degrees(sensor_data.gyroscope.y))),
+            max(limits[0], min(limits[1], math.degrees(
+                sensor_data.gyroscope.x))),
+            max(limits[0], min(limits[1], math.degrees(
+                sensor_data.gyroscope.y))),
             max(limits[0], min(limits[1], math.degrees(sensor_data.gyroscope.z))))
         self.compass = math.degrees(sensor_data.compass)
 
@@ -955,7 +1006,7 @@ class RadarSensor(object):
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         bound_z = 0.5 + self._parent.bounding_box.extent.z
 
-        self.velocity_range = 7.5 # m/s
+        self.velocity_range = 7.5  # m/s
         world = self._parent.get_world()
         self.debug = world.debug
         bp = world.get_blueprint_library().find('sensor.other.radar')
@@ -964,7 +1015,7 @@ class RadarSensor(object):
         self.sensor = world.spawn_actor(
             bp,
             carla.Transform(
-                carla.Location(x=bound_x + 0.05, z=bound_z+0.05),
+                carla.Location(x=bound_x + 0.05, z=bound_z + 0.05),
                 carla.Rotation(pitch=5)),
             attach_to=self._parent)
         # We need a weak reference to self to avoid circular reference.
@@ -998,7 +1049,8 @@ class RadarSensor(object):
             def clamp(min_v, max_v, value):
                 return max(min_v, min(value, max_v))
 
-            norm_velocity = detect.velocity / self.velocity_range # range [-1, 1]
+            norm_velocity = detect.velocity / \
+                self.velocity_range  # range [-1, 1]
             r = int(clamp(0.0, 1.0, 1.0 - norm_velocity) * 255.0)
             g = int(clamp(0.0, 1.0, 1.0 - abs(norm_velocity)) * 255.0)
             b = int(abs(clamp(- 1.0, 0.0, - 1.0 - norm_velocity)) * 255.0)
@@ -1028,17 +1080,24 @@ class CameraManager(object):
 
         if not self._parent.type_id.startswith("walker.pedestrian"):
             self._camera_transforms = [
-                (carla.Transform(carla.Location(x=-2.0*bound_x, y=+0.0*bound_y, z=2.0*bound_z), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid),
-                (carla.Transform(carla.Location(x=+1.9*bound_x, y=+1.0*bound_y, z=1.2*bound_z)), Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=-2.8*bound_x, y=+0.0*bound_y, z=4.6*bound_z), carla.Rotation(pitch=6.0)), Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=-1.0, y=-1.0*bound_y, z=0.4*bound_z)), Attachment.Rigid)]
+                (carla.Transform(carla.Location(x=-2.0 * bound_x, y=+0.0 * bound_y,
+                 z=2.0 * bound_z), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=+0.8 * bound_x, y=+
+                 0.0 * bound_y, z=1.3 * bound_z)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=+1.9 * bound_x, y=+
+                 1.0 * bound_y, z=1.2 * bound_z)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=-2.8 * bound_x, y=+0.0 * bound_y,
+                 z=4.6 * bound_z), carla.Rotation(pitch=6.0)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=-1.0, y=-1.0 * bound_y, z=0.4 * bound_z)), Attachment.Rigid)]
         else:
             self._camera_transforms = [
-                (carla.Transform(carla.Location(x=-2.5, z=0.0), carla.Rotation(pitch=-8.0)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=-2.5, z=0.0),
+                 carla.Rotation(pitch=-8.0)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=1.6, z=1.7)), Attachment.Rigid),
-                (carla.Transform(carla.Location(x=2.5, y=0.5, z=0.0), carla.Rotation(pitch=-8.0)), Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=-4.0, z=2.0), carla.Rotation(pitch=6.0)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=2.5, y=0.5, z=0.0),
+                 carla.Rotation(pitch=-8.0)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=-4.0, z=2.0),
+                 carla.Rotation(pitch=6.0)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=0, y=-2.5, z=-0.0), carla.Rotation(yaw=90.0)), Attachment.Rigid)]
 
         self.transform_index = 1
@@ -1046,17 +1105,20 @@ class CameraManager(object):
             ['sensor.camera.rgb', cc.Raw, 'Camera RGB', {}],
             ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)', {}],
             ['sensor.camera.depth', cc.Depth, 'Camera Depth (Gray Scale)', {}],
-            ['sensor.camera.depth', cc.LogarithmicDepth, 'Camera Depth (Logarithmic Gray Scale)', {}],
-            ['sensor.camera.semantic_segmentation', cc.Raw, 'Camera Semantic Segmentation (Raw)', {}],
+            ['sensor.camera.depth', cc.LogarithmicDepth,
+                'Camera Depth (Logarithmic Gray Scale)', {}],
+            ['sensor.camera.semantic_segmentation', cc.Raw,
+                'Camera Semantic Segmentation (Raw)', {}],
             ['sensor.camera.semantic_segmentation', cc.CityScapesPalette,
                 'Camera Semantic Segmentation (CityScapes Palette)', {}],
-            ['sensor.lidar.ray_cast', None, 'Lidar (Ray-Cast)', {'range': '50'}],
+            ['sensor.lidar.ray_cast', None,
+                'Lidar (Ray-Cast)', {'range': '50'}],
             ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
             ['sensor.camera.rgb', cc.Raw, 'Camera RGB Distorted',
                 {'lens_circle_multiplier': '3.0',
-                'lens_circle_falloff': '3.0',
-                'chromatic_aberration_intensity': '0.5',
-                'chromatic_aberration_offset': '0'}],
+                 'lens_circle_falloff': '3.0',
+                 'chromatic_aberration_intensity': '0.5',
+                 'chromatic_aberration_offset': '0'}],
             ['sensor.camera.optical_flow', cc.Raw, 'Optical Flow', {}],
         ]
         world = self._parent.get_world()
@@ -1082,13 +1144,15 @@ class CameraManager(object):
         self.index = None
 
     def toggle_camera(self):
-        self.transform_index = (self.transform_index + 1) % len(self._camera_transforms)
+        self.transform_index = (self.transform_index +
+                                1) % len(self._camera_transforms)
         self.set_sensor(self.index, notify=False, force_respawn=True)
 
     def set_sensor(self, index, notify=True, force_respawn=False):
         index = index % len(self.sensors)
         needs_respawn = True if self.index is None else \
-            (force_respawn or (self.sensors[index][2] != self.sensors[self.index][2]))
+            (force_respawn or (self.sensors[index]
+             [2] != self.sensors[self.index][2]))
         if needs_respawn:
             if self.sensor is not None:
                 self.sensor.destroy()
@@ -1101,7 +1165,8 @@ class CameraManager(object):
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
-            self.sensor.listen(lambda image: CameraManager._parse_image(weak_self, image))
+            self.sensor.listen(
+                lambda image: CameraManager._parse_image(weak_self, image))
         if notify:
             self.hud.notification(self.sensors[index][2])
         self.index = index
@@ -1111,7 +1176,8 @@ class CameraManager(object):
 
     def toggle_recording(self):
         self.recording = not self.recording
-        self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
+        self.hud.notification('Recording %s' %
+                              ('On' if self.recording else 'Off'))
 
     def render(self, display):
         if self.surface is not None:
@@ -1142,8 +1208,10 @@ class CameraManager(object):
                 ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', np.bool)]))
             dvs_img = np.zeros((image.height, image.width, 3), dtype=np.uint8)
             # Blue is positive, red is negative
-            dvs_img[dvs_events[:]['y'], dvs_events[:]['x'], dvs_events[:]['pol'] * 2] = 255
-            self.surface = pygame.surfarray.make_surface(dvs_img.swapaxes(0, 1))
+            dvs_img[dvs_events[:]['y'], dvs_events[:]
+                    ['x'], dvs_events[:]['pol'] * 2] = 255
+            self.surface = pygame.surfarray.make_surface(
+                dvs_img.swapaxes(0, 1))
         elif self.sensors[self.index][0].startswith('sensor.camera.optical_flow'):
             image = image.get_color_coded_flow()
             array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
@@ -1178,15 +1246,17 @@ def draw_waypoints(world, waypoint, depth=6):
         world.debug.draw_arrow(begin, end, arrow_size=0.3, life_time=1.0)
         draw_waypoints(world, w, depth - 1)
 
+
 def find_nearest_xy(array, valueX, valueY):
     array = np.asarray(array)
     x = np.abs(array[:, 0] - valueX)
     # print(x)
     #l = np.where(np.logical_and(x >= -0.25, x <= 0.25))
     y = np.abs(array[:, 1] - valueY)
-    idx = (x+y).argmin()
+    idx = (x + y).argmin()
 
     return idx
+
 
 def game_loop(args):
     pygame.init()
@@ -1213,14 +1283,11 @@ def game_loop(args):
         client = carla.Client(args.host, args.port)
         client.set_timeout(20.0)
         birdview_producer = BirdViewProducer(
-        client,  # carla.Client
-        target_size=PixelDimensions(width=150, height=300),
-        pixels_per_meter=5,
-        crop_type=BirdViewCropType.FRONT_AND_REAR_AREA
+            client,  # carla.Client
+            target_size=PixelDimensions(width=150, height=300),
+            pixels_per_meter=5,
+            crop_type=BirdViewCropType.FRONT_AND_REAR_AREA
         )
-
-
-
 
         sim_world = client.get_world()
         if args.sync:
@@ -1241,7 +1308,7 @@ def game_loop(args):
         display = pygame.display.set_mode(
             (args.width, args.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
-        display.fill((0,0,0))
+        display.fill((0, 0, 0))
         pygame.display.flip()
 
         hud = HUD(args.width, args.height)
@@ -1254,38 +1321,42 @@ def game_loop(args):
             sim_world.wait_for_tick()
 
         graph = GridWorld(275, 275)
-        
-        #print(world.map.get_waypoint(world.player.get_location()))
+
+        # print(world.map.get_waypoint(world.player.get_location()))
         wps = world.map.get_waypoint(world.player.get_location()).next(1500.0)
         all_waypoints = world.map.generate_waypoints(5)
-        all_waypoints_xy = np.empty(shape=(0,2))
-        for i,val in enumerate(all_waypoints):
-            all_waypoints_xy = np.append(all_waypoints_xy,np.array([[val.transform.location.x,val.transform.location.y]]),axis=0)
-        
+        all_waypoints_xy = np.empty(shape=(0, 2))
+        for i, val in enumerate(all_waypoints):
+            all_waypoints_xy = np.append(all_waypoints_xy, np.array(
+                [[val.transform.location.x, val.transform.location.y]]), axis=0)
+
         #goal = find_nearest_xy(np.array(all_waypoints))
-        #print(wps[-1])
-        #for i,val in enumerate(all_waypoints):
-            #print(val)
+        # print(wps[-1])
+        # for i,val in enumerate(all_waypoints):
+            # print(val)
         dist = wps[-1].transform.location
 
-        #print('------'+str(world.player.get_transform().location.lane_type()))
+        # print('------'+str(world.player.get_transform().location.lane_type()))
         actor_transform = world.player.get_transform()
         actor_loc = actor_transform.location
 
-        goal = all_waypoints[find_nearest_xy(all_waypoints_xy, actor_loc.x+200,actor_loc.y+200)].transform.location
+        goal = all_waypoints[find_nearest_xy(
+            all_waypoints_xy, actor_loc.x + 200, actor_loc.y + 200)].transform.location
 
-        origin_carla = np.array([actor_loc.x-(138*3.6),actor_loc.y-(138*3.6)])
+        origin_carla = np.array(
+            [actor_loc.x - (138 * 3.6), actor_loc.y - (138 * 3.6)])
 
         print(goal)
         yaw_offset = actor_transform.rotation.yaw
-        #print(actor_loc.distance(dist))
+        # print(actor_loc.distance(dist))
         s_start = 'x138y138'
-        #print(s_start)
-        s_goal = 'x'+str(int(round((goal.x-origin_carla[0])/3.6)))+'y'+str(int(round((goal.y-origin_carla[1])/3.6)))
+        # print(s_start)
+        s_goal = 'x' + str(int(round((goal.x - origin_carla[0]) / 3.6))) + 'y' + str(
+            int(round((goal.y - origin_carla[1]) / 3.6)))
         print(s_goal)
         goal_coords = stateNameToCoords(s_goal)
 
-        VIEWING_RANGE = (150/5)*3.6
+        VIEWING_RANGE = (150 / 5) * 3.6
 
         graph.setStart(s_start)
         graph.setGoal(s_goal)
@@ -1298,8 +1369,8 @@ def game_loop(args):
         s_current = s_start
         pos_coords = stateNameToCoords(s_current)
 
-        #graph.setStart(s_start)
-        #graph.setGoal(s_goal)
+        # graph.setStart(s_start)
+        # graph.setGoal(s_goal)
         #k_m = 0
         #s_last = s_start
         #queue = []
@@ -1308,20 +1379,19 @@ def game_loop(args):
 
         #s_current = s_start
 
-
         clock = pygame.time.Clock()
         while True:
             if args.sync:
                 sim_world.tick()
             birdview = birdview_producer.produce(
-            agent_vehicle=world.player  # carla.Actor (spawned vehicle)
-                )
+                agent_vehicle=world.player  # carla.Actor (spawned vehicle)
+            )
             road_mask = birdview[0]
             vehicles_mask = birdview[3]
             ped_mask = birdview[8]
 
             s_new, k_m = moveAndRescan(
-                    graph, queue, s_current, VIEWING_RANGE, k_m)
+                graph, queue, s_current, VIEWING_RANGE, k_m)
 
             if s_new == 'goal':
                 print('Goal Reached!')
@@ -1329,19 +1399,20 @@ def game_loop(args):
                 s_current = s_new
                 pos_coords = stateNameToCoords(s_current)
 
-            #for i,val in enumerate(all_waypoints):
+            # for i,val in enumerate(all_waypoints):
             #    draw_waypoints(world.world, val)
             #    print(val)
-            #print(world.player.get_transform())
+            # print(world.player.get_transform())
 
             rgb = BirdViewProducer.as_rgb(birdview)
 
-            drivable = np.logical_and(road_mask,np.logical_not(np.logical_or(vehicles_mask,ped_mask)))
+            drivable = np.logical_and(road_mask, np.logical_not(
+                np.logical_or(vehicles_mask, ped_mask)))
 
             #k_m = moveAndRescan(graph, queue, s_current, VIEWING_RANGE, k_m)
 
             #tt = np.logical_and(road_mask,np.logical_not(np.logical_or(vehicles_mask,ped_mask)))
-            #print(np.array_equal(tt,drivable))
+            # print(np.array_equal(tt,drivable))
             """"
             print(np.shape(drivable))
             print(np.shape(rgb))
@@ -1349,63 +1420,67 @@ def game_loop(args):
             """
             actor_loc = world.player.get_transform().location
             #avg_width = math.floor(np.average(np.count_nonzero(drivable, axis=1)))
-            
-            origin_bird = np.array([actor_loc.x-(150/5),actor_loc.y+(75/5)])
 
-            waypoints_indcies = np.empty(shape=(0,2))
+            origin_bird = np.array(
+                [actor_loc.x - (150 / 5), actor_loc.y + (75 / 5)])
 
-            for i in range(0,np.shape(road_mask)[0],18):
+            waypoints_indcies = np.empty(shape=(0, 2))
+
+            for i in range(0, np.shape(road_mask)[0], 18):
                 row = road_mask[i]
                 road_seg_width = np.count_nonzero(row)
                 nt = 0
                 no_of_p = 0
-                for j,val in enumerate(row):
-                    #print(val)
+                for j, val in enumerate(row):
+                    # print(val)
                     if val:
                         nt += 1
                         if nt == 1:
-                            no_of_p = j+road_seg_width
-                        no_of_p -=1
+                            no_of_p = j + road_seg_width
+                        no_of_p -= 1
                         if no_of_p >= 0:
-                            if  nt == 12 or (nt-12) % 18 ==0:
-                                waypoints_indcies = np.append(waypoints_indcies, np.array([[i,j]]),axis=0)
+                            if nt == 12 or (nt - 12) % 18 == 0:
+                                waypoints_indcies = np.append(
+                                    waypoints_indcies, np.array([[i, j]]), axis=0)
                         else:
-                            break 
-            
+                            break
+
             drivable = np.copy(road_mask)
-            
-            for i,val in enumerate(waypoints_indcies):
-                top_left = (val -18).astype(int)
-                for j in range(top_left[0],top_left[0]+17):
+
+            for i, val in enumerate(waypoints_indcies):
+                top_left = (val - 18).astype(int)
+                for j in range(top_left[0], top_left[0] + 17):
                     flag = False
-                    for k in range(top_left[1],top_left[1]+17):
-                        if road_mask[j,k]:
+                    for k in range(top_left[1], top_left[1] + 17):
+                        if road_mask[j, k]:
                             if vehicles_mask[j][k] or ped_mask[j][k]:
-                                rows = np.arrange(top_left[0],top_left[0]+17)
-                                cols = np.arrange(top_left[1],top_left[1]+17)
-                                drivable[rows,cols] = 0
+                                rows = np.arrange(
+                                    top_left[0], top_left[0] + 17)
+                                cols = np.arrange(
+                                    top_left[1], top_left[1] + 17)
+                                drivable[rows, cols] = 0
                                 flag = True
-                                break 
+                                break
                     if flag:
                         break
-            false_indcies = np.empty(shape=(0,2))
-            for i in range(9,np.shape(drivable)[0],18):
+            false_indcies = np.empty(shape=(0, 2))
+            for i in range(9, np.shape(drivable)[0], 18):
                 row = road_mask[i]
-                for j in range(9,np.shape(drivable)[1],18):
+                for j in range(9, np.shape(drivable)[1], 18):
                     if not drivable[i][j]:
-                        false_indcies = np.append(false_indcies, np.array([[i,j]]),axis=0)
-            #print(np.array_equal())
-            
+                        false_indcies = np.append(
+                            false_indcies, np.array([[i, j]]), axis=0)
+            # print(np.array_equal())
 
             theta = world.imu_sensor.compass
-            #print(world.imu_sensor.compass)
+            # print(world.imu_sensor.compass)
             #c, s = np.cos(-theta), np.sin(-theta)
 
             #r = np.array([[c ,-s],[s,c]])
-            #print(world.player.get_transform().rotation.yaw)
+            # print(world.player.get_transform().rotation.yaw)
 
-            #bird_rotated_waypoints = np.add(
-            #    
+            # bird_rotated_waypoints = np.add(
+            #
             #        r.dot(
             #            np.add(
             #                waypoints_indcies,
@@ -1414,47 +1489,47 @@ def game_loop(args):
             #                .T
             #                ,np.array([[150,75]])
             #                )
-            translated_waypoints = np.array([((false_indcies[:,0]/5)+ origin_bird[0]),((false_indcies[:,1]/5)+origin_bird[1])]).T
-            #print(translated_waypoints)
-            graph  
+            translated_waypoints = np.array(
+                [((false_indcies[:, 0] / 5) + origin_bird[0]), ((false_indcies[:, 1] / 5) + origin_bird[1])]).T
+            # print(translated_waypoints)
+            graph
             c, s = np.cos(theta), np.sin(theta)
 
-            r = np.array([[c ,-s],[s,c]])
-
+            r = np.array([[c, -s], [s, c]])
 
             rotated_waypoints = np.add(
-                
-                    r.dot(
-                        np.add(
-                            translated_waypoints,
-                            np.array([[-150/5,-75/5]])
-                            ).T)
-                            .T
-                            ,np.array([[150/5,75/5]])
-                            )
+
+                r.dot(
+                    np.add(
+                        translated_waypoints,
+                        np.array([[-150 / 5, -75 / 5]])
+                    ).T)
+                .T, np.array([[150 / 5, 75 / 5]])
+            )
             #c, s = np.cos(theta), np.sin(-theta)
             #r = np.array([[c ,-s],[s,c]])
-            #print(origin_bird)
-            #print(translated_waypoints[0])
-            grid_waypoints = np.around(np.array([(rotated_waypoints[:,0]-origin_carla[0])/3.6,(rotated_waypoints[:,1]-origin_carla[1])/3.6]).T).astype(int)
+            # print(origin_bird)
+            # print(translated_waypoints[0])
+            grid_waypoints = np.around(np.array(
+                [(rotated_waypoints[:, 0] - origin_carla[0]) / 3.6, (rotated_waypoints[:, 1] - origin_carla[1]) / 3.6]).T).astype(int)
 
-            for i,val in enumerate(grid_waypoints):
+            for i, val in enumerate(grid_waypoints):
                 if(graph.cells[val[0]][val[1]] == 0):
                     graph.cells[val[0]][val[1]] = -1
-                
-            #print(waypoints_indcies)
-            #print("--------------------------------------------------------")
-            
-            for i,val in enumerate(waypoints_indcies): 
-                #print(drivable[int(val[0])][int(val[1])])
 
-                rgb[int(val[0])][int(val[1])] = np.array([0,17,255])
+            # print(waypoints_indcies)
+            # print("--------------------------------------------------------")
 
-            for i,val in enumerate(rotated_waypoints): 
-                #print(drivable[int(val[0])][int(val[1])])
+            for i, val in enumerate(waypoints_indcies):
+                # print(drivable[int(val[0])][int(val[1])])
+
+                rgb[int(val[0])][int(val[1])] = np.array([0, 17, 255])
+
+            for i, val in enumerate(rotated_waypoints):
+                # print(drivable[int(val[0])][int(val[1])])
                 if not(val[0] >= 300 or val[0] < 0 or val[1] >= 150 or val[1] < 0):
-                    rgb[int(val[0])][int(val[1])] = np.array([255,17,0])
-            
+                    rgb[int(val[0])][int(val[1])] = np.array([255, 17, 0])
+
             """
             fp = 0
             
@@ -1475,7 +1550,7 @@ def game_loop(args):
             #    if c <= 0:
             #        break   
             #    else:
-            """     
+            """
 
             """
             center_lines = birdview[2]
@@ -1527,7 +1602,8 @@ def game_loop(args):
             print(rgb[135][(fp<rgb[135]) & (rgb[135]<lp)])
             """
 
-            bgr = cv.cvtColor(rgb, cv.COLOR_BGR2RGB) # NOTE imshow requires BGR color model
+            # NOTE imshow requires BGR color model
+            bgr = cv.cvtColor(rgb, cv.COLOR_BGR2RGB)
             cv.imshow("BirdView RGB", bgr)
             clock.tick_busy_loop(60)
             if controller.parse_events(client, world, clock, args.sync):
