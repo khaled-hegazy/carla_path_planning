@@ -1,0 +1,3 @@
+[submodule "d-star-lite"]
+	path = d-star-lite
+	url = https://github.com/mdeyo/d-star-lite.git
