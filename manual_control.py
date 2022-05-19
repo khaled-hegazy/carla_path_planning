@@ -91,8 +91,10 @@ import math
 import random
 import re
 import weakref
+import sys
 from carla_birdeye_view import BirdViewProducer, BirdViewCropType, PixelDimensions
 from cv2 import cv2 as cv
+sys.path.append('./d-star-lite')
 from grid import GridWorld
 from utils import stateNameToCoords
 from d_star_lite import initDStarLite, moveAndRescan
@@ -1281,8 +1283,21 @@ def game_loop(args):
         #print(s_start)
         s_goal = 'x'+str(int(round((goal.x-origin_carla[0])/3.6)))+'y'+str(int(round((goal.y-origin_carla[1])/3.6)))
         print(s_goal)
+        goal_coords = stateNameToCoords(s_goal)
+
+        VIEWING_RANGE = (150/5)*3.6
+
         graph.setStart(s_start)
         graph.setGoal(s_goal)
+        k_m = 0
+        s_last = s_start
+        queue = []
+
+        graph, queue, k_m = initDStarLite(graph, queue, s_start, s_goal, k_m)
+
+        s_current = s_start
+        pos_coords = stateNameToCoords(s_current)
+
         #graph.setStart(s_start)
         #graph.setGoal(s_goal)
         #k_m = 0
@@ -1304,6 +1319,15 @@ def game_loop(args):
             road_mask = birdview[0]
             vehicles_mask = birdview[3]
             ped_mask = birdview[8]
+
+            s_new, k_m = moveAndRescan(
+                    graph, queue, s_current, VIEWING_RANGE, k_m)
+
+            if s_new == 'goal':
+                print('Goal Reached!')
+            else:
+                s_current = s_new
+                pos_coords = stateNameToCoords(s_current)
 
             #for i,val in enumerate(all_waypoints):
             #    draw_waypoints(world.world, val)
@@ -1414,7 +1438,9 @@ def game_loop(args):
             #print(translated_waypoints[0])
             grid_waypoints = np.around(np.array([(rotated_waypoints[:,0]-origin_carla[0])/3.6,(rotated_waypoints[:,1]-origin_carla[1])/3.6]).T).astype(int)
 
-            print(grid_waypoints)
+            for i,val in enumerate(grid_waypoints):
+                if(graph.cells[val[0]][val[1]] == 0):
+                    graph.cells[val[0]][val[1]] = -1
                 
             #print(waypoints_indcies)
             #print("--------------------------------------------------------")
