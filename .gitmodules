@@ -4,3 +4,6 @@
 [submodule "Dstar-lite-pathplanner"]
 	path = Dstar-lite-pathplanner
 	url = https://github.com/Sollimann/Dstar-lite-pathplanner.git
+[submodule "concaveman-cpp"]
+	path = concaveman-cpp
+	url = https://github.com/sadaszewski/concaveman-cpp.git

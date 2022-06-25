@@ -66,6 +66,9 @@ import copy
 import glob
 import os
 import sys
+from turtle import distance, shape
+
+from pyparsing import empty
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -84,6 +87,7 @@ sys.path.append('./d-star-lite')
 from grid import GridWorld
 from utils import stateNameToCoords
 from d_star_lite import initDStarLite, moveAndRescan
+from roboticstoolbox import DstarPlanner, DistanceTransformPlanner
 
 try:
     sys.path.append('/home/youssef/Apps/CARLA_0.9.12/PythonAPI/carla')
@@ -1282,15 +1286,37 @@ def find_nearest_xy(array, valueX, valueY):
     array = np.asarray(array)
     x = np.abs(array[:, 0] - valueX)
     # print(x)
-    # l = np.where(np.logical_and(x >= -0.25, x <= 0.25))
+    l = np.where(np.logical_and(x >= -0.25, x <= 0.25))
     y = np.abs(array[:, 1] - valueY)
     idx = (x + y).argmin()
     return idx
+
+
+def find_nearest_x_all(array, row_val, col_val, direction):
+    array = np.asarray(array)
+    margin = 5
+    if direction == 0:
+        col = np.abs(array[:, 1] - col_val)
+    else:
+        col = array[:, 1] - col_val
+        if direction == 1:
+            margin = - margin
+
+    # print(x)
+    l = np.where(col <= margin)[0]
+
+    # y = np.abs(array[:, 1] - valueY)
+    # idx = (x + y).argmin()
+    if len(l) == 0:
+        return None
+    else:
+        return l[0]
 # -----------
 
 
-def path_plan(goal_bird, false_indcies):
-    graph = GridWorld(grid_width, grid_height)
+def path_plan(grid_width, grid_height, goal_bird, false_indcies):
+    print("Called")
+    graph = GridWorld(grid_width, grid_height, connect8=True)
     s_start = 'x' + str(int(birdeye_height - 1)) + \
         'y' + str(int(birdeye_width / 2 - 1))
     s_goal = 'x' + str(int(goal_bird[0])) + \
@@ -1307,7 +1333,7 @@ def path_plan(goal_bird, false_indcies):
     path_plan_points_temp = np.empty(shape=(0, 2))
     for i, val in enumerate(false_indcies.astype(int)):
         graph.cells[val[1]][val[0]] = -1
-    while s_new != 'goal' and s_new != 'You are done stuck' and s_current != 'You are done stuck':
+    while s_new != 'goal' and s_current is not None and s_new is not None and graph.cells[goal_bird[1]][goal_bird[0]] != -1 and graph.cells[goal_bird[1]][goal_bird[0]] != -2:
         current_tup = stateNameToCoords(s_current)
         if current_tup[0] != float('inf') and current_tup[1] != float('inf'):
             path_plan_points_temp = np.append(
@@ -1410,6 +1436,7 @@ def game_loop(args):
             vehicles_mask = birdview[3]
             ped_mask = birdview[8]
             cenetrs_mask = birdview[2]
+            agent_mask = birdview[4]
 
             actor_loc = world.player.get_transform().location
 
@@ -1435,6 +1462,7 @@ def game_loop(args):
 
             waypoints_indcies = np.empty(shape=(0, 2))
             lane_width = math.ceil(3.6 * birdeye_ppm)
+
             """
             for i in range(0, np.shape(road_mask)[0], lane_width):
                 row = road_mask[i]
@@ -1458,13 +1486,117 @@ def game_loop(args):
 
             for i in range(0, np.shape(road_mask)[0], lane_width):
                 flag_found_center = False
+                pslc = 0
                 for j in range(len(row) - 1, 0, -1):
-                    if cenetrs_mask[i][j]:
+                    if cenetrs_mask[i][j] and pslc <= 0:
                         waypoints_indcies = np.append(
                             waypoints_indcies, np.array([[i, j]]), axis=0)
+                        pslc = math.floor(birdeye_ppm * 2)
                         flag_found_center = True
                     if not road_mask[i][j] and flag_found_center:
                         break
+                    pslc -= 1
+
+            waypoints_indcies_clone = np.copy(waypoints_indcies)
+            waypoints_indcies_clone = waypoints_indcies_clone[np.lexsort(
+                (waypoints_indcies_clone[:, 1], waypoints_indcies_clone[:, 0]))]
+            # print(waypoints_indcies_clone)
+            # print("------------------")
+            color = (101, 71, 173)
+            lines = []
+            for i, waypoint in enumerate(waypoints_indcies_clone):
+                line_canvas = np.zeros(
+                    shape=(birdeye_height, birdeye_width, 3), dtype=np.uint8)
+                next_waypoints = np.where(
+                    np.logical_and(waypoints_indcies_clone[:, 0] == waypoint[0] + 11, waypoint[1] + 3 < waypoints_indcies_clone[:, 1]))[0]
+                if len(next_waypoints) != 0:
+                    next_waypoint = waypoints_indcies_clone[next_waypoints[0]]
+                    # print(waypoint)
+                    # print(next_waypoint)
+                    cv.line(line_canvas, tuple(np.flip(waypoint, 0).astype(int)),
+                            tuple(np.flip(next_waypoint, 0).astype(int)), color, 1)
+                    line = np.where(np.all(line_canvas == color, axis=-1))
+                    lines.append(line)
+
+            for i, waypoint in reversed(list(enumerate(waypoints_indcies_clone))):
+                line_canvas = np.zeros(
+                    shape=(birdeye_height, birdeye_width, 3), dtype=np.uint8)
+                next_waypoints = np.where(
+                    np.logical_and(waypoints_indcies_clone[:, 0] == waypoint[0] + 11, waypoint[1] - 3 > waypoints_indcies_clone[:, 1]))[0]
+                if len(next_waypoints) != 0:
+                    next_waypoint = waypoints_indcies_clone[next_waypoints[0]]
+                    # print(waypoint)
+                    # print(next_waypoint)
+                    cv.line(line_canvas, tuple(np.flip(waypoint, 0).astype(int)),
+                            tuple(np.flip(next_waypoint, 0).astype(int)), color, 1)
+                    line = np.where(np.all(line_canvas == color, axis=-1))
+                    lines.append(line)
+
+            lines_mask = np.logical_or(np.logical_or(
+                np.zeros(shape=(birdeye_height, birdeye_width)), cenetrs_mask), agent_mask)
+            for i, line in enumerate(lines):
+                lines_mask[line] = 1
+
+            # minys = waypoints_indcies_clone[np.where(
+            #     waypoints_indcies_clone[:, 0] == waypoints_indcies_clone[0][0])[0]][:, 1]
+            # maxys = np.where(waypoints_indcies_clone[:, 0] == waypoints_indcies_clone[len(
+            #     waypoints_indcies_clone) - 1][0])[0]
+
+            # maxy_i = maxys[0]
+            # topleft_wp = minys.argmin()
+            # topright_wp = minys.argmax()
+            # bottomleft_wp = maxy_i + \
+            #     waypoints_indcies_clone[maxys][:, 1].argmin()
+            # bottomrigth_wp = maxy_i + \
+            #     waypoints_indcies_clone[maxys][:, 1].argmax()
+
+            # TL = waypoints_indcies_clone[topleft_wp][1]
+            # BL = waypoints_indcies_clone[bottomleft_wp][1]
+            # TR = waypoints_indcies_clone[topright_wp][1]
+            # BR = waypoints_indcies_clone[bottomrigth_wp][1]
+
+            # direction = -1
+
+            # if (TL + 2 < BL and TR - 2 > BR) or abs(TL - BL) <= 2 or abs(TR - BR) <= 2:
+            #     direction = 0
+            # elif TL > BL + 2 and TR > BR + 2:
+            #     direction = 1
+            # else:
+            #     direction = 2
+            # waypoints_grid = []
+            # waypoint_cols = []
+
+            # # while waypoints_indcies_clone.size != 0:
+            # curr = 0
+            # while len(waypoints_indcies_clone) != 0:
+            #     current = waypoints_indcies_clone[curr]
+            #     waypoint_cols.append(current)
+            #     waypoints_indcies_clone = np.delete(
+            #         waypoints_indcies_clone, curr, 0)
+
+            #     curr = find_nearest_x_all(waypoints_indcies_clone,
+            #                               current[0], current[1], direction)
+            #     # if curr_list is not None:
+            #     #     if isinstance(curr_list, int):
+            #     #         if waypoints_indcies_clone[curr_list][0] == current[0]:
+            #     #             curr = None
+            #     #         else:
+            #     #             curr = curr_list
+            #     #     else:
+            #     #         curr = None
+            #     #         for i, val in enumerate(curr_list):
+            #     #             if waypoints_indcies_clone[val][0] != current[0]:
+            #     #                 curr = val
+            #     #                 break
+            #     # else:
+            #     #     curr = None
+            #     if curr is None:
+            #         curr = 0
+            #         waypoints_grid.append(waypoint_cols)
+            #         waypoint_cols = []
+            # print("------------------")
+            # for i, val in enumerate(waypoints_grid):
+            #     print(np.multiply(val, 8))
 
             road_mask_clone = np.copy(road_mask)
             for i, val in enumerate(waypoints_indcies):
@@ -1497,7 +1629,7 @@ def game_loop(args):
                                 break
                     if flag:
                         break
-
+            road_mask_clone = np.logical_and(road_mask_clone, lines_mask)
             false_indcies = np.empty(shape=(0, 2))
             for i, row in enumerate(road_mask_clone):
                 for j, col in enumerate(row):
@@ -1507,14 +1639,40 @@ def game_loop(args):
 
             rgb = BirdViewProducer.as_rgb(birdview)
 
-            for i, val in enumerate(false_indcies.astype(int)):
-                rgb[val[0]][val[1]] = (255, 0, 0)
+            # for i, val in enumerate(false_indcies.astype(int)):
+            #    rgb[val[0]][val[1]] = (255, 0, 0)
+
+            for i, val in enumerate(waypoints_indcies.astype(int)):
+                rgb[val[0]][val[1]] = (0, 0, 255)
+
+            rgb[road_mask_clone] = (44, 0, 67)
+
             if not alive:
-                # shared_path = Value('path', np.empty(shape=(0, 2)))
-                proc = Process(target=path_plan, args=[
-                    copy.deepcopy(goal_bird), false_indcies])
+                # shared_path = Value(
+                #    'pathy = np.abs(array[:, 1] - valueY)', np.empty(shape=(0, 2)))
+                proc = Process(target=path_plan, args=[grid_width, grid_height,
+                                                       copy.deepcopy(goal_bird), false_indcies])
                 proc.start()
                 alive = True
+
+            # occgrid = np.ones((birdeye_height, birdeye_width))
+            # occgrid[(road_mask_clone)] = 0
+            # occgrid = occgrid.astype(int)
+            # notfalse = (
+            #     np.array(np.where(occgrid == 0)).T).astype(int)
+
+            # random_goal = (notfalse[1][1], notfalse[1][0])
+            # random_start = (notfalse[5][1], notfalse[5][0])
+            # print(random_start)
+            # print(occgrid[random_start])
+            # ds = DistanceTransformPlanner(
+            #     occgrid, goal=random_goal, distance="euclidean")
+            # ds.plan()
+            # path = ds.query(
+            #     start=random_start)
+            # print(np.shape(path))
+            # for i, val in enumerate(path):
+            #   rgb[val[0]][val[1]] = color
 
             if len(path_plan_points) != 0:
                 for i, val in enumerate(path_plan_points):
@@ -1537,7 +1695,6 @@ def game_loop(args):
             # ------
 
             if proc is not None and not proc.is_alive():
-                print("Balllop")
                 alive = False
                 path_plan_points = copy.deepcopy(shared_path)
 
